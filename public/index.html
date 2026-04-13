@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>◎ Solana Whale Scanner</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#020608;color:#b0d0e0;font-family:'Space Mono',monospace;font-size:12px;min-height:100vh}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#1a2a3a;border-radius:2px}
+
+/* HEADER */
+#hdr{background:linear-gradient(180deg,#060f18,#020608);border-bottom:1px solid #08151e;padding:14px}
+#logo{font-size:18px;font-weight:700;color:#d0eeff;letter-spacing:0.06em}
+#logo span{color:#9945FF}
+#sub{font-size:8px;color:#1a4060;letter-spacing:0.1em;margin-top:3px;text-transform:uppercase}
+#stats{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.chip{display:flex;flex-direction:column;align-items:center;background:#060e16;border:1px solid #0a1820;border-radius:6px;padding:4px 10px;gap:1px}
+.chip-l{font-size:7px;color:#1a3a5a}
+.chip-v{font-size:17px;font-weight:700;line-height:1}
+#live-dot{width:7px;height:7px;border-radius:50%;background:#00e676;animation:pulse 1.5s infinite;flex-shrink:0}
+#live-txt{font-size:9px;color:#1a4060;letter-spacing:0.08em}
+#live-row{display:flex;align-items:center;gap:7px;margin-top:8px}
+
+/* BUTTONS */
+.btn{background:rgba(153,69,255,0.08);border:1px solid rgba(153,69,255,0.35);border-radius:6px;color:#9945FF;padding:5px 12px;font-size:9px;cursor:pointer;font-family:inherit;letter-spacing:0.06em}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn-stop{background:rgba(255,69,0,0.1);border-color:#ff4500;color:#ff4500}
+.btn-go{background:rgba(0,230,118,0.1);border-color:#00e676;color:#00e676}
+
+/* BAR */
+#bar{display:flex;gap:6px;padding:7px 14px;background:#040b12;border-bottom:1px solid #08151e;flex-wrap:wrap;align-items:center}
+.pill{background:transparent;border:1px solid #0a1820;border-radius:4px;color:#1a4a6a;padding:3px 10px;font-size:9px;cursor:pointer;font-family:inherit}
+.pill.on{background:rgba(153,69,255,0.1);border-color:#9945FF;color:#9945FF}
+select{background:#060e16;border:1px solid #0a1820;border-radius:4px;color:#6a9aaa;font-size:9px;padding:3px 6px;font-family:inherit}
+
+/* GRID */
+#main{padding:10px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px}
+
+/* CARD */
+.card{border-radius:11px;padding:13px;position:relative;overflow:hidden;transition:box-shadow 0.3s}
+.card-hot  {background:rgba(255,69,0,0.09);  border:1px solid rgba(255,69,0,0.4);  box-shadow:0 0 16px rgba(255,69,0,0.12)}
+.card-watch{background:rgba(249,199,79,0.06);border:1px solid rgba(249,199,79,0.3)}
+.card-radar{background:rgba(79,195,247,0.04);border:1px solid rgba(79,195,247,0.22)}
+.card-low  {background:transparent;          border:1px solid #0d1a24}
+.card-top-bar{position:absolute;top:0;left:0;right:0;height:2px}
+.card-hdr{display:flex;justify-content:space-between;margin-bottom:8px}
+.coin-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.coin-sym{font-size:14px;font-weight:700;color:#d8eef8;line-height:1}
+.coin-name{font-size:9px;color:#2a5060;margin-top:2px}
+.score-label{font-size:9px;font-weight:700}
+.score-num{font-size:25px;font-weight:700;line-height:1}
+
+/* STATS GRID */
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px;margin-bottom:7px}
+.stat{background:#030a10;border-radius:4px;padding:4px 5px}
+.stat-k{font-size:7px;color:#1a3a4a;letter-spacing:0.1em;margin-bottom:1px}
+.stat-v{font-size:10px;font-weight:600}
+
+/* BUY BAR */
+.buybar{display:flex;align-items:center;gap:5px;margin-bottom:7px}
+.buybar-track{flex:1;height:4px;background:#030a10;border-radius:2px;overflow:hidden}
+.buybar-fill{height:100%;background:linear-gradient(90deg,#00c853,#ffd600);border-radius:2px;transition:width 0.8s ease}
+
+/* FLAGS */
+.flags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:7px}
+.flag{border-radius:3px;padding:1px 6px;font-size:8px;background:rgba(255,255,255,0.04)}
+
+/* WHALE ALERT */
+.whale-alert{background:rgba(255,69,0,0.07);border:1px solid rgba(255,69,0,0.22);border-radius:6px;padding:6px 9px;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.whale-title{font-size:9px;color:#ff8060;font-weight:700}
+.whale-sub{font-size:8px;color:#6a3020;margin-top:2px}
+
+/* CARD FOOTER */
+.card-foot{display:flex;justify-content:space-between;align-items:center}
+.foot-meta{font-size:8px;color:#1a3040}
+.pump-btn{background:rgba(153,69,255,0.09);border:1px solid rgba(153,69,255,0.28);border-radius:4px;color:#9945FF;padding:2px 9px;font-size:9px;text-decoration:none}
+
+/* CA ROW */
+.ca-row{display:flex;align-items:center;gap:5px;margin-top:7px}
+.ca-addr{flex:1;background:#020a10;border:1px solid #0d1f2a;border-radius:4px;padding:4px 7px;font-size:8px;color:#1a6a80;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:0.02em}
+.copy-btn{flex-shrink:0;padding:5px 10px;font-size:9px;cursor:pointer;font-family:inherit;font-weight:700;white-space:nowrap;border-radius:5px;border-width:1px;border-style:solid;transition:all 0.15s;background:rgba(249,199,79,0.1);border-color:rgba(249,199,79,0.6);color:#f9c74f}
+.copy-btn.ok{background:rgba(0,230,118,0.15);border-color:#00e676;color:#00e676}
+.copy-btn.err{background:rgba(255,82,82,0.12);border-color:#ff5252;color:#ff5252}
+
+/* WHALE FEED */
+#feed{padding:12px}
+.feed-item{display:flex;gap:8px;padding:8px 10px;background:rgba(255,69,0,0.05);border:1px solid rgba(255,69,0,0.18);border-radius:8px;margin-bottom:8px;animation:slideIn 0.3s ease}
+.feed-whale{font-size:20px;flex-shrink:0}
+.feed-title{font-size:10px;color:#ff6040;font-weight:700}
+.feed-sub{font-size:9px;color:#8ab0c0;line-height:1.4;margin-top:2px}
+.feed-ca{font-size:8px;color:#1a4a5a;font-family:monospace;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-time{font-size:8px;color:#2a4a5a;flex-shrink:0}
+
+/* EMPTY / LOADING */
+#empty{display:none;padding:50px;text-align:center;color:#1a3a4a;font-size:11px;grid-column:1/-1}
+#loading-msg{display:none;padding:50px;text-align:center;color:#1a4a6a;font-size:11px}
+.spinner{width:24px;height:24px;border:2px solid #0a1a2a;border-top-color:#9945FF;border-radius:50%;animation:spin 0.6s linear infinite;display:inline-block;margin-bottom:12px}
+
+/* ANIMATIONS */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+
+</head>
+<body>
+
+<!-- HEADER -->
+
+<div id="hdr">
+  <div id="logo"><span>◎</span> SOLANA WHALE SCANNER</div>
+  <div id="sub">PUMP.FUN · REAL-TIME WHALE SIGNALS · LIVE DexScreener DATA</div>
+  <div id="stats">
+    <div class="chip"><span class="chip-l">🔥 HOT</span><span class="chip-v" id="c-hot" style="color:#ff4500">0</span></div>
+    <div class="chip"><span class="chip-l">⚡ WATCH</span><span class="chip-v" id="c-watch" style="color:#f9c74f">0</span></div>
+    <div class="chip"><span class="chip-l">🐋 WHALE</span><span class="chip-v" id="c-whale" style="color:#ce93d8">0</span></div>
+    <div class="chip"><span class="chip-l">TOKENS</span><span class="chip-v" id="c-total" style="color:#9945FF">0</span></div>
+    <div class="chip"><span class="chip-l">NEXT</span><span class="chip-v" id="c-cd" style="color:#00e676">—</span></div>
+    <button class="btn" id="btn-scan" onclick="doScan()">⟳ SCAN</button>
+    <button class="btn btn-stop" id="btn-auto" onclick="toggleAuto()">⏹ STOP</button>
+  </div>
+  <div id="live-row">
+    <div id="live-dot"></div>
+    <span id="live-txt">STARTING UP...</span>
+  </div>
+</div>
+
+<!-- BAR -->
+
+<div id="bar">
+  <button class="pill on" onclick="setTab('signals',this)">📊 Signals</button>
+  <button class="pill"    onclick="setTab('whales',this)">🐋 Whale Feed</button>
+  <div style="display:flex;gap:4px">
+    <button class="pill" style="font-size:8px;padding:2px 7px" onclick="setHours(1,this)">1h</button>
+    <button class="pill" style="font-size:8px;padding:2px 7px" onclick="setHours(2,this)">2h</button>
+    <button class="pill on" style="font-size:8px;padding:2px 7px" onclick="setHours(4,this)">4h</button>
+  </div>
+  <select id="sort-sel" onchange="renderGrid()">
+    <option value="score">Score ↓</option>
+    <option value="newest">Newest first</option>
+    <option value="volume">Volume ↓</option>
+    <option value="whale">Whale first</option>
+  </select>
+  <span id="pair-count" style="font-size:8px;color:#1a4060;margin-left:auto"></span>
+</div>
+
+<!-- MAIN -->
+
+<div id="main">
+  <div id="loading-msg"><div class="spinner"></div><br>Fetching live pump.fun data...</div>
+  <div id="grid"></div>
+  <div id="empty">No tokens found. Try increasing the time window or hit Scan.</div>
+  <div id="feed" style="display:none"></div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let pairs = [], whaleFeed = [], tab = "signals", hours = 4, auto = true;
+let cd = 20, scanTimer, cdTimer, scanning = false;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (!n && n!==0) return "?";
+  if (n>=1e6) return "$"+(n/1e6).toFixed(2)+"M";
+  if (n>=1e3) return "$"+(n/1e3).toFixed(1)+"K";
+  return "$"+Math.round(n);
+}
+function fmtAge(m) {
+  if (m<60) return m+"m";
+  return (m/60).toFixed(1)+"h";
+}
+function fmtPrice(p) {
+  const n = parseFloat(p);
+  if (!n) return "$0";
+  if (n<0.000001) return "$"+n.toExponential(2);
+  if (n<0.001)    return "$"+n.toFixed(7);
+  if (n<1)        return "$"+n.toFixed(5);
+  return "$"+n.toFixed(3);
+}
+function tierClass(s) {
+  return s>=75?"hot":s>=52?"watch":s>=32?"radar":"low";
+}
+function tierColor(s) {
+  return s>=75?"#ff4500":s>=52?"#f9c74f":s>=32?"#4fc3f7":"#3a5a6a";
+}
+function tierLabel(s) {
+  return s>=75?"🔥 BUY":s>=52?"⚡ WATCH":s>=32?"👁 RADAR":"· LOW";
+}
+function flags(p) {
+  const fl = [];
+  if (p.ageMin<10)          fl.push("🆕 "+p.ageMin+"m old");
+  else if (p.ageMin<30)     fl.push(p.ageMin+"m old");
+  if (p.vol5m>80000)        fl.push("🔥 "+fmt(p.vol5m));
+  else if (p.vol5m>20000)   fl.push(fmt(p.vol5m)+" vol");
+  if (p.change5m>40)        fl.push("🚀 +"+p.change5m+"%");
+  else if (p.change5m>15)   fl.push("+"+p.change5m+"%");
+  else if (p.change5m<-20)  fl.push("📉 "+p.change5m+"%");
+  if (p.buyRatio>78 && (p.buys+p.sells)>8) fl.push(p.buyRatio+"% buys");
+  if (p.score>=75) fl.push("🐋 whale signal");
+  return fl;
+}
+
+// ── Copy CA ──────────────────────────────────────────────────────────────────
+function copyCA(addr, btn) {
+  navigator.clipboard.writeText(addr).then(()=>{
+    btn.textContent="✓ COPIED"; btn.className="copy-btn ok";
+    setTimeout(()=>{btn.textContent="⎘ COPY CA";btn.className="copy-btn";},2000);
+  }).catch(()=>{
+    const el=document.createElement("textarea");
+    el.value=addr;el.style.cssText="position:fixed;opacity:0";
+    document.body.appendChild(el);el.select();
+    try{document.execCommand("copy");btn.textContent="✓ COPIED";btn.className="copy-btn ok";}
+    catch{btn.textContent="✗ FAIL";btn.className="copy-btn err";}
+    document.body.removeChild(el);
+    setTimeout(()=>{btn.textContent="⎘ COPY CA";btn.className="copy-btn";},2000);
+  });
+}
+
+// ── Render grid ──────────────────────────────────────────────────────────────
+function renderGrid() {
+  if (tab==="whales") return renderFeed();
+
+  let show = [...pairs];
+  const sort = document.getElementById("sort-sel").value;
+  if (sort==="newest") show.sort((a,b)=>a.ageMin-b.ageMin);
+  else if (sort==="volume") show.sort((a,b)=>b.vol5m-a.vol5m);
+  else if (sort==="whale") {
+    show.sort((a,b)=>b.score-a.score);
+    show = [...show.filter(p=>p.score>=75), ...show.filter(p=>p.score<75)];
+  } else show.sort((a,b)=>b.score-a.score);
+
+  document.getElementById("c-hot").textContent   = pairs.filter(p=>p.score>=75).length;
+  document.getElementById("c-watch").textContent = pairs.filter(p=>p.score>=52&&p.score<75).length;
+  document.getElementById("c-whale").textContent = pairs.filter(p=>p.score>=75&&p.buyRatio>75).length;
+  document.getElementById("c-total").textContent = pairs.length;
+  document.getElementById("pair-count").textContent = show.length+" tokens";
+
+  document.getElementById("loading-msg").style.display = "none";
+  document.getElementById("feed").style.display = "none";
+  document.getElementById("grid").style.display = "grid";
+
+  if (show.length===0) {
+    document.getElementById("empty").style.display="block";
+    document.getElementById("grid").innerHTML="";
+    return;
+  }
+  document.getElementById("empty").style.display="none";
+
+  const tc = s => tierColor(s);
+  document.getElementById("grid").innerHTML = show.map(p=>{
+    const hue = (p.symbol.charCodeAt(0)*47)%360;
+    const fl = flags(p);
+    const pc = p.change5m>0?"#00e676":p.change5m<0?"#ff5252":"#4a6a7a";
+    const isWhale = p.score>=75 && p.buyRatio>75;
+    return `
+    <div class="card card-${tierClass(p.score)}">
+      ${p.score>=75?`<div class="card-top-bar" style="background:linear-gradient(90deg,transparent,${tc(p.score)},transparent)"></div>`:""}
+      <div class="card-hdr">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="coin-icon" style="background:hsl(${hue},55%,18%);border:2px solid hsl(${hue},55%,33%)">
+            ${p.symbol.slice(0,2).toUpperCase()}
+          </div>
+          <div>
+            <div class="coin-sym">${p.symbol}</div>
+            <div class="coin-name">${(p.name||"").slice(0,22)}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="score-label" style="color:${tc(p.score)}">${tierLabel(p.score)}</div>
+          <div class="score-num" style="color:${tc(p.score)}">${p.score}</div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="stat-k">AGE</div><div class="stat-v" style="color:#6a9aac">${fmtAge(p.ageMin)}</div></div>
+        <div class="stat"><div class="stat-k">5M %</div><div class="stat-v" style="color:${pc}">${p.change5m>0?"+":""}${p.change5m}%</div></div>
+        <div class="stat"><div class="stat-k">VOL 5M</div><div class="stat-v" style="color:#8aacbc">${fmt(p.vol5m)}</div></div>
+        <div class="stat"><div class="stat-k">MCAP</div><div class="stat-v" style="color:#7ab8cc">${fmt(p.mcap)}</div></div>
+      </div>
+
+      <div class="buybar">
+        <span style="font-size:8px;color:#1a3a4a;min-width:26px">BUY</span>
+        <div class="buybar-track"><div class="buybar-fill" style="width:${p.buyRatio}%"></div></div>
+        <span style="font-size:8px;color:#006030;font-weight:700">${p.buyRatio}%</span>
+        <span style="font-size:8px;color:#3a0010">${100-p.buyRatio}%↓</span>
+      </div>
+
+      ${fl.length?`<div class="flags">${fl.map(f=>`<span class="flag" style="border:1px solid ${tc(p.score)}33;color:${tc(p.score)}">${f}</span>`).join("")}</div>`:""}
+
+      ${isWhale?`
+      <div class="whale-alert">
+        <span style="font-size:18px">🐋</span>
+        <div>
+          <div class="whale-title">Whale activity detected</div>
+          <div class="whale-sub">${p.buyRatio}% buys · ${fmt(p.vol5m)} in 5m · strong accumulation signal</div>
+        </div>
+      </div>`:""}
+
+      <div class="card-foot">
+        <span class="foot-meta">${(p.dex||"pump.fun").toUpperCase()} · ${p.holders||""} </span>
+        <a href="${p.pumpUrl}" target="_blank" class="pump-btn">PUMP.FUN →</a>
+      </div>
+
+      <div class="ca-row">
+        <div class="ca-addr" title="${p.ca}">${p.ca}</div>
+        <button class="copy-btn" onclick="copyCA('${p.ca}',this)">⎘ COPY CA</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderFeed() {
+  document.getElementById("grid").style.display="none";
+  document.getElementById("empty").style.display="none";
+  document.getElementById("loading-msg").style.display="none";
+  const feed = document.getElementById("feed");
+  feed.style.display="block";
+  if (whaleFeed.length===0) {
+    feed.innerHTML=`<div style="padding:40px;text-align:center;color:#1a3a4a;font-size:11px">No whale activity yet. Hit Scan to start.</div>`;
+    return;
+  }
+  feed.innerHTML=whaleFeed.map(e=>`
+    <div class="feed-item">
+      <span class="feed-whale">🐋</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between">
+          <span class="feed-title">${e.symbol} — whale buying</span>
+          <span class="feed-time">${e.timeStr}</span>
+        </div>
+        <div class="feed-sub">
+          ${fmt(e.vol5m)} volume · +${e.change5m}% · ${e.buys} buys vs ${e.sells} sells
+        </div>
+        <div class="feed-ca">${e.ca}</div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <a href="${e.pumpUrl}" target="_blank" class="pump-btn" style="font-size:8px">PUMP.FUN →</a>
+          <button class="copy-btn" style="padding:2px 8px;font-size:8px" onclick="copyCA('${e.ca}',this)">⎘ COPY CA</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+async function doScan() {
+  if (scanning) return;
+  scanning = true;
+  document.getElementById("btn-scan").disabled = true;
+  document.getElementById("live-dot").style.background = "#f9c74f";
+  document.getElementById("live-txt").textContent = "SCANNING PUMP.FUN...";
+
+  if (pairs.length===0) {
+    document.getElementById("loading-msg").style.display="block";
+    document.getElementById("grid").style.display="none";
+  }
+
+  try {
+    const [scanRes, whaleRes] = await Promise.allSettled([
+      fetch(`/api/scan?hours=${hours}`),
+      fetch(`/api/whales`),
+    ]);
+
+    if (scanRes.status==="fulfilled" && scanRes.value.ok) {
+      const data = await scanRes.value.json();
+      pairs = data.pairs || [];
+    }
+
+    if (whaleRes.status==="fulfilled" && whaleRes.value.ok) {
+      const data = await whaleRes.value.json();
+      const now = new Date().toLocaleTimeString("en-US",{hour12:false});
+      const newEvents = (data.whales||[]).map(w=>({...w, timeStr:now}));
+      whaleFeed = [...newEvents, ...whaleFeed].slice(0,30);
+    }
+
+    renderGrid();
+    document.getElementById("live-dot").style.background="#00e676";
+    document.getElementById("live-txt").textContent =
+      `LIVE · ${pairs.length} TOKENS · ${pairs.filter(p=>p.score>=75).length} HOT SIGNALS · ${new Date().toLocaleTimeString()}`;
+
+  } catch(e) {
+    document.getElementById("live-dot").style.background="#ff5252";
+    document.getElementById("live-txt").textContent = "ERROR: "+e.message;
+    document.getElementById("loading-msg").style.display="none";
+  }
+
+  scanning = false;
+  document.getElementById("btn-scan").disabled = false;
+}
+
+// ── Auto scan ─────────────────────────────────────────────────────────────────
+function startAuto() {
+  clearInterval(scanTimer); clearInterval(cdTimer);
+  cd=20;
+  scanTimer = setInterval(doScan,20000);
+  cdTimer = setInterval(()=>{
+    cd=cd<=1?20:cd-1;
+    document.getElementById("c-cd").textContent=cd+"s";
+  },1000);
+}
+
+function toggleAuto() {
+  auto=!auto;
+  const btn=document.getElementById("btn-auto");
+  if(auto){
+    btn.textContent="⏹ STOP";btn.className="btn btn-stop";
+    startAuto();
+  } else {
+    btn.textContent="▶ AUTO";btn.className="btn btn-go";
+    clearInterval(scanTimer);clearInterval(cdTimer);
+    document.getElementById("c-cd").textContent="—";
+  }
+}
+
+function setTab(t,btn){
+  tab=t;
+  document.querySelectorAll("#bar .pill").forEach(b=>{
+    if(["signals","whales"].includes(b.getAttribute("onclick")?.match(/'(\w+)'/)?.[1])){
+      b.classList.remove("on");
+    }
+  });
+  btn.classList.add("on");
+  renderGrid();
+}
+
+function setHours(h,btn){
+  hours=h;
+  document.querySelectorAll("#bar .pill").forEach(b=>{
+    if(["1","2","4"].includes(b.getAttribute("onclick")?.match(/\((\d+)/)?.[1])){
+      b.classList.remove("on");
+    }
+  });
+  btn.classList.add("on");
+  doScan();
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+doScan();
+startAuto();
+</script>
+
+</body>
+</html>
